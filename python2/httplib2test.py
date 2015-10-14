@@ -552,6 +552,26 @@ class HttpTest(unittest.TestCase):
         #    self.assertRaises(httplib2.CertificateHostnameMismatch,
         #            self.http.request, "https://google.com/", "GET")
 
+    def testSslHostnameValidationCustom(self):
+        # test self-signed government certificate (subjectAltName without dns)
+        # if unpatched, a CertificateHostnameMismatch exception will be raise: 
+        # Server presented certificate that does not match host cot.arba.gov.ar
+        # {'notAfter': 'Jun 22 15:41:12 2020 GMT', 
+        #  'subjectAltName': (('email', 'seguridadlogica@arba.gov.ar'),), 
+        #  'subject': ((('countryName', u'AR'),), 
+        #              (('stateOrProvinceName', u'Buenos Aires'),), 
+        #              (('localityName', u'La Plata'),), 
+        #              (('organizationName', u'ARBA'),), 
+        #              (('commonName', u'*.arba.gov.ar'),))}
+        custom_ca_certs = os.path.join(
+                os.path.dirname(os.path.abspath(httplib2.__file__ )),
+                "test", "custom_cacerts.txt")
+        http = httplib2.Http(ca_certs=custom_ca_certs)
+        try:
+          http.request("https://cot.arba.gov.ar/", "GET")
+        except httplib2.CertificateHostnameMismatch:
+          self.fail('custom cacert for *.arba.gov.ar should be valid')
+
     def testSslCertValidationWithoutSslModuleFails(self):
         if sys.version_info < (2, 6):
             http = httplib2.Http(disable_ssl_certificate_validation=False)
