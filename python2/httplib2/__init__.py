@@ -978,12 +978,16 @@ class HTTPSConnectionWithTimeout(httplib.HTTPSConnection):
         Returns:
           list: A list of valid host globs.
         """
+        ret = None
+        # first check SAN extension for DNS names (new certs should have this):
         if 'subjectAltName' in cert:
-            return [x[1] for x in cert['subjectAltName']
-                    if x[0].lower() == 'dns']
-        else:
-            return [x[0][1] for x in cert['subject']
-                    if x[0][0].lower() == 'commonname']
+            ret = [x[1] for x in cert['subjectAltName']
+                   if x[0].lower() == 'dns']
+        # no SubjectAltName, or no DNS entry on it, use just subject: 
+        if not ret:
+            ret = [x[0][1] for x in cert['subject']
+                   if x[0][0].lower() == 'commonname']
+        return ret
 
     def _ValidateCertificateHostname(self, cert, hostname):
         """Validates that a given hostname is valid for an SSL certificate.
